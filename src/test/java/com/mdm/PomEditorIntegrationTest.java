@@ -45,8 +45,14 @@ class PomEditorIntegrationTest {
         Assertions.assertTrue(newContent.contains("<groupId>com.test</groupId>"), "New dependency should be present");
         Assertions.assertTrue(newContent.contains("<groupId>old</groupId>"), "Old dependency should be preserved");
         
-        // Check backup existence
-        Assertions.assertTrue(Files.exists(pom.resolveSibling("pom.xml.bak")), "Backup file should exist");
+        // Check history existence (New architecture)
+        Path historyDir = pom.getParent().resolve(".mdm/history");
+        Assertions.assertTrue(Files.exists(historyDir), "History directory should exist");
+        
+        try (java.util.stream.Stream<Path> files = Files.list(historyDir)) {
+             long snapshotCount = files.filter(p -> p.toString().endsWith(".xml")).count();
+             Assertions.assertTrue(snapshotCount > 0, "At least one history snapshot should exist in " + historyDir);
+        }
     }
     
      @Test

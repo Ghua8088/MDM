@@ -1,0 +1,9 @@
+dist
+dist-installer
+my-app
+.mdm
+target
+*.jar
+*.class
+*.log
+*.xml

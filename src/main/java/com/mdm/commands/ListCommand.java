@@ -1,6 +1,7 @@
 package com.mdm.commands;
 
 import picocli.CommandLine.Command;
+import com.mdm.util.ConsoleUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -27,8 +28,23 @@ public class ListCommand implements Callable<Integer> {
         Document doc = dBuilder.parse(pom);
         doc.getDocumentElement().normalize();
 
-        System.out.printf("%-30s | %-30s | %-15s | %-10s%n", "Group ID", "Artifact ID", "Version", "Scope");
-        System.out.println("---------------------------------------------------------------------------------------------------------");
+        ConsoleUtils.printHeader("Dependency List");
+        ConsoleUtils.printDivider();
+        ConsoleUtils.printRow("GROUP ID", "ARTIFACT ID", "VERSION", "SCOPE");
+        ConsoleUtils.printDivider();
+        
+        // 1. Parse properties to resolve placeholders
+        java.util.Map<String, String> properties = new java.util.HashMap<>();
+        NodeList propList = doc.getElementsByTagName("properties");
+        if (propList.getLength() > 0) {
+            NodeList props = propList.item(0).getChildNodes();
+            for (int j = 0; j < props.getLength(); j++) {
+                Node pNode = props.item(j);
+                if (pNode.getNodeType() == Node.ELEMENT_NODE) {
+                    properties.put(pNode.getNodeName(), pNode.getTextContent().trim());
+                }
+            }
+        }
 
         NodeList nList = doc.getElementsByTagName("dependency");
 
@@ -41,15 +57,22 @@ public class ListCommand implements Callable<Integer> {
                 String v = getTagValue("version", eElement);
                 String s = getTagValue("scope", eElement);
                 
-                // version might be a property reference ${...}, removing that logic for simplicity unless requested
+                // Resolve version if it is a property like ${foo.version}
+                if (v != null && v.startsWith("${") && v.endsWith("}")) {
+                    String key = v.substring(2, v.length() - 1);
+                    if (properties.containsKey(key)) {
+                        v = properties.get(key); // Show resolved value!
+                    }
+                }
                 
-                System.out.printf("%-30s | %-30s | %-15s | %-10s%n", 
+                ConsoleUtils.printRow(
                         g != null ? g : "-", 
                         a != null ? a : "-", 
                         v != null ? v : "LATEST", 
                         s != null ? s : "compile");
             }
         }
+        ConsoleUtils.printDivider();
         return 0;
     }
 

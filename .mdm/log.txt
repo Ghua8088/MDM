@@ -1,1 +1,3 @@
 20260110_214520 | pom-20260110_214520.xml | Added commons-io:commons-io:2.14.0
+20260110_215610 | pom-20260110_215610.xml | Added log4j:log4j:1.2.17
+20260110_220405 | pom-20260110_220405.xml | Updated log4j:log4j to 1.2.18

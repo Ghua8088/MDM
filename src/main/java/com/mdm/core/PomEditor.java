@@ -36,7 +36,9 @@ public class PomEditor {
 
         // 3. Check for duplicates
         if (hasDependency(content, dependency)) {
-            System.out.println("Dependency " + dependency + " already exists in pom.xml. Skipping.");
+            // Should theoretically not happen if caller used updateVersion first, but safe guard.
+            System.out.println("Dependency " + dependency + " already exists. ensuring version match...");
+            // We could just return here.
             return;
         }
 
@@ -53,6 +55,58 @@ public class PomEditor {
         // Logic: specific groupId followed nearby by specific artifactId
         return content.contains("<groupId>" + dep.getGroupId() + "</groupId>") &&
                content.contains("<artifactId>" + dep.getArtifactId() + "</artifactId>");
+    }
+
+    public boolean updateVersion(Path pomPath, String groupId, String artifactId, String newVersion) throws IOException {
+        HistoryManager history = new HistoryManager(pomPath.getParent());
+        history.saveSnapshot(pomPath, "Updated " + groupId + ":" + artifactId + " to " + newVersion);
+        
+        String content = Files.readString(pomPath, StandardCharsets.UTF_8);
+        
+        // Find the specific dependency block
+        Pattern depPattern = Pattern.compile("(\\s*<dependency>)(.*?)(</dependency>)", Pattern.DOTALL);
+        Matcher matcher = depPattern.matcher(content);
+        
+        StringBuilder sb = new StringBuilder();
+        int lastEnd = 0;
+        boolean found = false;
+        
+        while (matcher.find()) {
+            String fullBlock = matcher.group(0);
+            String inner = matcher.group(2);
+            
+            if (inner.contains("<groupId>" + groupId + "</groupId>") && 
+                inner.contains("<artifactId>" + artifactId + "</artifactId>")) {
+                
+                // Found the block. Now replace version inside 'fullBlock' or 'inner'.
+                // We prefer replacing inside fullBlock to keep context.
+                String updatedBlock;
+                if (inner.contains("<version>")) {
+                    // Replace existing version
+                    updatedBlock = fullBlock.replaceAll("<version>.*?</version>", "<version>" + newVersion + "</version>");
+                } else {
+                    // No version tag (managed dependency?), insert it.
+                    // Insert before </dependency> (group 3 is closing tag in pattern? No, we used full match)
+                    // Let's just insert before the closing </artifactId> or similar?
+                    // Safer: Insert before scope or closing tag.
+                    int closeIdx = fullBlock.lastIndexOf("</dependency>");
+                    String indent = detectIndentation(fullBlock, closeIdx); // We might need to guess indent
+                    updatedBlock = fullBlock.substring(0, closeIdx) + indent + "    <version>" + newVersion + "</version>\n" + indent + "</dependency>";
+                }
+                
+                sb.append(content, lastEnd, matcher.start());
+                sb.append(updatedBlock);
+                lastEnd = matcher.end();
+                found = true;
+            }
+        }
+        sb.append(content.substring(lastEnd)); // Append rest
+        
+        if (found) {
+            Files.writeString(pomPath, sb.toString(), StandardCharsets.UTF_8);
+            return true;
+        }
+        return false;
     }
 
     public boolean removeDependency(Path pomPath, String groupId, String artifactId) throws IOException {

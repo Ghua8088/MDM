@@ -60,7 +60,23 @@ public class AddCommand implements Callable<Integer> {
             dep.setScope(scope);
         }
 
-        System.out.println("Adding dependency: " + dep);
+        // Check if exists using a quick read (using PomEditor internal or ad-hoc check? 
+        // Better to try add, if PomEditor says exists, we update. 
+        // But PomEditor.addDependency is void and handles text.
+        // Let's peek at file content for existence check here? Or modify PomEditor.addDependency to return status?
+        // Modifying AddCommand to use editor.updateVersion if add fails/checks positive.
+        
+        // We will move the check logic here or rely on editor.
+        // Let's try to update first? No, logic: Add if missing, Update if present.
+        
+        // Simple check:
+        // We know checking raw text is flaky, but for CLI it's fast.
+        // Better: We'll modify the AddCommand flow to check via list/search? 
+        // Let's just trust our editor's helper if we made it public, or use the one we just added.
+        // Wait, PomEditor.hasDependency is private. I'll make it redundant by trying update first?
+        // No, `updateVersion` returns false if not found.
+        
+        System.out.println("Processing dependency: " + dep);
         
         // Assume pom.xml is in current directory for now
         Path pomPath = Paths.get("pom.xml").toAbsolutePath();
@@ -69,8 +85,13 @@ public class AddCommand implements Callable<Integer> {
              return 1;
         }
 
-        editor.addDependency(pomPath, dep);
-        System.out.println("Success! Dependency added to pom.xml");
+        // Strategy: Try Update. If false (not found), then Add.
+        if (editor.updateVersion(pomPath, groupId, artifactId, version)) {
+             System.out.println("Dependency exists! Updated version to " + version);
+        } else {
+             editor.addDependency(pomPath, dep);
+             System.out.println("Dependency added to pom.xml");
+        }
 
         return 0;
     }
