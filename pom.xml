@@ -14,36 +14,31 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <picocli.version>4.7.5</picocli.version>
         <junit.version>5.10.0</junit.version>
+        <jpackage.extra.args></jpackage.extra.args>
     </properties>
 
     <dependencies>
-        <!-- CLI Framework -->
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
             <version>${picocli.version}</version>
         </dependency>
-
-        <!-- XML Handling (for complex parsing if needed, though we will aim for native/StAX for preservation) -->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
             <version>2.16.0</version>
         </dependency>
-
-        <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-    
         <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.13.2</version>
-                <scope>test</scope>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -66,7 +61,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Make the JAR executable -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -92,6 +86,18 @@
 
     <profiles>
         <profile>
+            <id>windows-setup</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.extra.args>--win-console</jpackage.extra.args>
+            </properties>
+        </profile>
+
+        <profile>
             <id>native</id>
             <build>
                 <plugins>
@@ -108,31 +114,16 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/jpackage</executable>
-                                    <arguments>
-                                        <argument>--type</argument>
-                                        <argument>app-image</argument>
-                                        
-                                        <argument>--dest</argument>
-                                        <argument>dist</argument>
-                                        
-                                        <argument>--name</argument>
-                                        <argument>mdm</argument>
-                                        
-                                        <argument>--input</argument>
-                                        <argument>${project.build.directory}</argument>
-                                        
-                                        <argument>--main-jar</argument>
-                                        <argument>${project.build.finalName}.jar</argument>
-                                        
-                                        <argument>--main-class</argument>
-                                        <argument>com.mdm.Main</argument>
-                                        
-                                        <argument>--win-console</argument>
-                                        
-                                        <!-- Resource Constraint: 128MB RAM Limit -->
-                                        <argument>--java-options</argument>
-                                        <argument>-Xmx128m</argument>
-                                    </arguments>
+                                    <commandlineArgs>
+                                        --type app-image
+                                        --dest dist
+                                        --name mdm
+                                        --input ${project.build.directory}
+                                        --main-jar ${project.build.finalName}.jar
+                                        --main-class com.mdm.Main
+                                        --java-options -Xmx128m
+                                        ${jpackage.extra.args}
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
                         </executions>
@@ -140,6 +131,7 @@
                 </plugins>
             </build>
         </profile>
+
         <profile>
             <id>installer</id>
             <build>
@@ -157,25 +149,15 @@
                                 </goals>
                                 <configuration>
                                     <executable>${java.home}/bin/jpackage</executable>
-                                    <arguments>
-                                        <argument>--type</argument>
-                                        <argument>app-image</argument>
-                                        
-                                        <argument>--dest</argument>
-                                        <argument>dist-installer</argument>
-                                        
-                                        <argument>--name</argument>
-                                        <argument>setup-mdm</argument>
-                                        
-                                        <argument>--input</argument>
-                                        <argument>${project.build.directory}</argument>
-                                        
-                                        <argument>--main-jar</argument>
-                                        <argument>${project.build.finalName}.jar</argument>
-                                        
-                                        <argument>--main-class</argument>
-                                        <argument>com.mdm.installer.InstallerUI</argument>
-                                    </arguments>
+                                    <commandlineArgs>
+                                        --type app-image
+                                        --dest dist-installer
+                                        --name setup-mdm
+                                        --input ${project.build.directory}
+                                        --main-jar ${project.build.finalName}.jar
+                                        --main-class com.mdm.installer.InstallerUI
+                                        ${jpackage.extra.args}
+                                    </commandlineArgs>
                                 </configuration>
                             </execution>
                         </executions>
